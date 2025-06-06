@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imou Desk Occupancy Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: #f7f7f7;
+            color: #222;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #FF385C, #E31C5F);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .connection-badge.connected {
+            background: #DEF7EC;
+            color: #065F46;
+        }
+
+        .connection-badge.disconnected {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.connected {
+            background: #10B981;
+        }
+
+        .status-dot.disconnected {
+            background: #EF4444;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 32px 0;
+            display: grid;
+            gap: 32px;
+        }
+
+        /* Configuration Card */
+        .config-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #E5E7EB;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-input {
+            padding: 12px 16px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #FF385C;
+            box-shadow: 0 0 0 3px rgba(255, 56, 92, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #FF385C;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #E31C5F;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #F3F4F6;
+            color: #374151;
+            border: 1px solid #D1D5DB;
+        }
+
+        .btn-secondary:hover {
+            background: #E5E7EB;
+        }
+
+        .btn-success {
+            background: #10B981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #EF4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        /* Video Feed */
+        .video-section {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #E5E7EB;
+        }
+
+        .video-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+        }
+
+        .video-element {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .live-indicator {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .video-controls {
+            padding: 16px 24px;
+            background: #F9FAFB;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* Desk Grid */
+        .desk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .desk-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #E5E7EB;
+            transition: all 0.2s;
+        }
+
+        .desk-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .desk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .desk-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .desk-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .desk-status.occupied {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .desk-status.vacant {
+            background: #DEF7EC;
+            color: #065F46;
+        }
+
+        .desk-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 12px;
+            background: #F9FAFB;
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #6B7280;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        /* Analytics */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #E5E7EB;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                justify-content: center;
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .desk-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #E5E7EB;
+            border-top: 2px solid #FF385C;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .setup-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">📹</div>
+                    <div class="logo-text">Imou Desk Tracker</div>
+                </div>
+                <div class="connection-badge disconnected" id="connectionStatus">
+                    <div class="status-dot disconnected"></div>
+                    Disconnected
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <div class="main-content">
+            <!-- Configuration -->
+            <div class="config-card">
+                <h2 class="card-title">
+                    🔧 Camera Configuration
+                </h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="deviceId">Device ID</label>
+                        <input type="text" id="deviceId" class="form-input" placeholder="Enter camera device ID">
+                        <small style="color: #6B7280; font-size: 12px;">Don't know your Device ID? Connect first, then click "Find Devices"</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="refreshRate">Refresh Rate (seconds)</label>
+                        <input type="number" id="refreshRate" class="form-input" value="5" min="1" max="60">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="connectCamera()">
+                        🔗 Connect Camera
+                    </button>
+                    <button class="btn btn-secondary" onclick="getDeviceList()">
+                        📱 Find Devices
+                    </button>
+                    <button class="btn btn-success" onclick="startTracking()">
+                        ▶️ Start Tracking
+                    </button>
+                    <button class="btn btn-danger" onclick="stopTracking()">
+                        ⏸️ Stop Tracking
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        📊 Export Data
+                    </button>
+                </div>
+                
+                <!-- Deployment Status -->
+                <div style="margin-top: 16px; padding: 12px; background: #FEF3C7; border-radius: 8px; border-left: 4px solid #F59E0B;">
+                    <div style="font-size: 14px; font-weight: 500; color: #92400E; margin-bottom: 4px;">
+                        🌐 Remote Access Setup
+                    </div>
+                    <div style="font-size: 12px; color: #78350F;">
+                        For remote access, deploy your backend and update API_BASE_URL in the code.
+                        <br>Currently configured for: <code id="currentApiUrl" style="background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 3px;"></code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Video Feed -->
+            <div class="video-section">
+                <div class="video-header">
+                    <h3 class="card-title">📹 Live Camera Feed</h3>
+                    <div class="live-indicator" id="liveIndicator" style="display: none;">
+                        <div class="live-dot"></div>
+                        LIVE
+                    </div>
+                </div>
+                <div class="video-container">
+                    <video id="videoElement" class="video-element" autoplay muted playsinline>
+                        Your browser does not support the video tag.
+                    </video>
+                    <canvas id="overlayCanvas" class="video-overlay" width="640" height="360"></canvas>
+                    <div id="setupOverlay" class="setup-overlay" style="display: none;">
+                        Click to position desk zones
+                    </div>
+                </div>
+                <div class="video-controls">
+                    <button class="btn btn-secondary" onclick="setupDeskZones()">
+                        📍 Setup Desk Zones
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshStream()">
+                        🔄 Refresh Stream
+                    </button>
+                    <button class="btn btn-secondary" onclick="toggleZones()">
+                        👁️ Toggle Zones
+                    </button>
+                </div>
+            </div>
+
+            <!-- Desk Status Grid -->
+            <div class="desk-grid" id="deskGrid">
+                <!-- Desk cards will be populated by JavaScript -->
+            </div>
+
+            <!-- Analytics -->
+            <div class="analytics-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title">📈 Occupancy Timeline</h3>
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">📊 Desk Utilization</h3>
+                    <canvas id="utilizationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration for remote access
+        const API_BASE_URL = 'https://your-deployed-backend.vercel.app'; // 🚨 UPDATE THIS AFTER DEPLOYMENT
+        
+        // Alternative: Auto-detect environment
+        const getApiBaseUrl = () => {
+            if (window.location.hostname === 'localhost') {
+                return 'http://localhost:3000';
+            }
+            return 'https://your-deployed-backend.vercel.app'; // 🚨 REPLACE WITH YOUR ACTUAL URL
+        };
+
+        // Application State
+        let appState = {
+            isConnected: false,
+            isTracking: false,
+            desks: [],
+            trackingData: [],
+            imouToken: null,
+            deviceId: null,
+            refreshInterval: null,
+            videoStream: null,
+            showZones: true,
+            isSettingUpZones: false,
+            currentZoneIndex: 0,
+            hlsInstance: null
+        };
+
+        // Configuration storage
+        let savedConfig = {
+            deviceId: '',
+            refreshRate: 5
+        };
+
+        // Show current API URL on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDesks();
+            initializeCharts();
+            loadConfiguration();
+            startVideoCanvas();
+            document.getElementById('currentApiUrl').textContent = getApiBaseUrl();
+        });
+
+        // Initialize 6 desks
+        function initializeDesks() {
+            appState.desks = [];
+            for(let i = 1; i <= 6; i++) {
+                appState.desks.push({
+                    id: i,
+                    name: `Desk ${i}`,
+                    occupied: Math.random() > 0.5,
+                    occupant: null,
+                    occupiedSince: null,
+                    vacantSince: new Date(),
+                    totalTimeToday: Math.floor(Math.random() * 300) * 60 * 1000,
+                    zone: {
+                        x: ((i-1) % 3) * 200 + 50,
+                        y: Math.floor((i-1) / 3) * 180 + 50,
+                        width: 150,
+                        height: 120
+                    }
+                });
+            }
+            renderDeskGrid();
+        }
+
+        // Render desk status cards
+        function renderDeskGrid() {
+            const grid = document.getElementById('deskGrid');
+            grid.innerHTML = '';
+
+            appState.desks.forEach(desk => {
+                const card = document.createElement('div');
+                card.className = 'desk-card';
+                
+                const occupiedTime = desk.occupied && desk.occupiedSince ? 
+                    formatDuration(desk.occupiedSince) : 
+                    formatDuration(desk.vacantSince);
+                
+                card.innerHTML = `
+                    <div class="desk-header">
+                        <div class="desk-title">${desk.name}</div>
+                        <div class="desk-status ${desk.occupied ? 'occupied' : 'vacant'}">
+                            ${desk.occupied ? '👤 Occupied' : '✅ Vacant'}
+                        </div>
+                    </div>
+                    <div class="desk-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Current Status</div>
+                            <div class="metric-value">${occupiedTime}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Today's Total</div>
+                            <div class="metric-value">${formatDuration(null, desk.totalTimeToday)}</div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Format duration for display
+        function formatDuration(since, totalMs = null) {
+            if (totalMs !== null) {
+                const hours = Math.floor(totalMs / (1000 * 60 * 60));
+                const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
+                return `${hours}h ${minutes}m`;
+            }
+            
+            if (!since) return '0m';
+            const diff = Date.now() - since.getTime();
+            const minutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(minutes / 60);
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes % 60}m`;
+            }
+            return `${minutes}m`;
+        }
+
+        // Save and load configuration
+        function saveConfiguration() {
+            savedConfig = {
+                deviceId: document.getElementById('deviceId').value,
+                refreshRate: document.getElementById('refreshRate').value
+            };
+        }
+
+        function loadConfiguration() {
+            document.getElementById('deviceId').value = savedConfig.deviceId || '';
+            document.getElementById('refreshRate').value = savedConfig.refreshRate || 5;
+        }
+
+        // Get Imou Access Token via backend proxy
+        async function getImouAccessToken() {
+            try {
+                console.log('🔑 Requesting access token via backend...');
+                
+                const apiUrl = getApiBaseUrl();
+                const response = await fetch(`${apiUrl}/api/imou/token`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Backend server error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.token) {
+                    console.log('✅ Access token obtained successfully');
+                    return { success: true, token: data.token };
+                } else {
+                    throw new Error(data.error || 'Failed to get access token');
+                }
+                
+            } catch (error) {
+                console.error('❌ Token request failed:', error);
+                
+                if (error.message.includes('fetch')) {
+                    const isLocal = window.location.hostname === 'localhost';
+                    if (isLocal) {
+                        alert('❌ Backend server not running!\n\n1. Start your backend: npm start\n2. Make sure it\'s running on port 3000');
+                    } else {
+                        alert('❌ Cannot connect to backend server!\n\n1. Make sure your backend is deployed\n2. Update API_BASE_URL in the code\n3. Check browser console for details');
+                    }
+                }
+                
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Get Imou Live Stream URL via backend proxy
+        async function getImouLiveStream(deviceId, token) {
+            try {
+                console.log('🎥 Requesting live stream URL via backend...');
+                
+                const apiUrl = getApiBaseUrl();
+                const response = await fetch(`${apiUrl}/api/imou/stream`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ deviceId, token })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Backend server error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.streamUrl) {
+                    console.log('✅ Live stream URL obtained successfully');
+                    return { success: true, streamUrl: data.streamUrl };
+                } else {
+                    throw new Error(data.error || 'Failed to get stream URL');
+                }
+                
+            } catch (error) {
+                console.error('❌ Stream request failed:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Get device list to help find camera Device ID
+        async function getDeviceList() {
+            try {
+                if (!appState.imouToken) {
+                    console.log('Getting token first...');
+                    const tokenResponse = await getImouAccessToken();
+                    if (!tokenResponse.success) {
+                        alert('Please connect first to get access token');
+                        return;
+                    }
+                    appState.imouToken = tokenResponse.token;
+                }
+
+                console.log('📱 Requesting device list...');
+                
+                const apiUrl = getApiBaseUrl();
+                const response = await fetch(`${apiUrl}/api/imou/devices`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ token: appState.imouToken })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Backend server error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.devices) {
+                    console.log('📋 Device list:', data.devices);
+                    
+                    const deviceList = data.devices.map(device => 
+                        `• ${device.deviceName || device.deviceId} (ID: ${device.deviceId})`
+                    ).join('\n');
+                    
+                    alert(`📱 Found ${data.devices.length} devices:\n\n${deviceList}\n\nCopy the Device ID for your IPC-S41F camera.`);
+                } else {
+                    throw new Error(data.error || 'Failed to get device list');
+                }
+                
+            } catch (error) {
+                console.error('❌ Device list request failed:', error);
+                alert(`Failed to get device list: ${error.message}`);
+            }
+        }
+
+        // Connect to Imou camera
+        async function connectCamera() {
+            const deviceId = document.getElementById('deviceId').value;
+
+            if (!deviceId) {
+                alert('Please enter your camera Device ID.\n\nIf you don\'t know it, click "Find Devices" first.');
+                return;
+            }
+
+            try {
+                console.log('🔌 Connecting to Imou camera...');
+                showLiveIndicator(false);
+                
+                const tokenResponse = await getImouAccessToken();
+                if (tokenResponse.success) {
+                    appState.imouToken = tokenResponse.token;
+                    console.log('✅ Access token obtained successfully');
+                    
+                    const streamResponse = await getImouLiveStream(deviceId, appState.imouToken);
+                    if (streamResponse.success) {
+                        console.log('✅ Stream URL obtained successfully');
+                        
+                        await setupVideoStream(streamResponse.streamUrl);
+                        updateConnectionStatus(true);
+                        showLiveIndicator(true);
+                        appState.deviceId = deviceId;
+                        saveConfiguration();
+                        
+                        alert('🎉 Connected successfully!\n\n✅ Live stream is now active\n✅ Ready to setup desk zones\n✅ Remote access enabled');
+                    } else {
+                        throw new Error(streamResponse.error || 'Failed to get live stream URL');
+                    }
+                } else {
+                    throw new Error(tokenResponse.error || 'Failed to get access token');
+                }
+                
+            } catch (error) {
+                console.error('❌ Connection failed:', error);
+                updateConnectionStatus(false);
+                showLiveIndicator(false);
+                
+                let errorMessage = '❌ Connection Failed\n\n';
+                
+                if (error.message.includes('Backend server error')) {
+                    errorMessage += '🔧 Backend server issue:\n';
+                    errorMessage += '• Make sure your backend is deployed and running\n';
+                    errorMessage += '• Check if your App ID and App Secret are set correctly\n';
+                    errorMessage += '• Verify the API_BASE_URL in the code\n\n';
+                } else if (error.message.includes('Device')) {
+                    errorMessage += '📱 Device issue:\n';
+                    errorMessage += '• Check if your Device ID is correct\n';
+                    errorMessage += '• Make sure your camera is online\n';
+                    errorMessage += '• Try clicking "Find Devices" to locate your camera\n\n';
+                } else if (error.message.includes('fetch')) {
+                    errorMessage += '🌐 Network issue:\n';
+                    errorMessage += '• Check your internet connection\n';
+                    errorMessage += '• Make sure backend is deployed and accessible\n\n';
+                }
+                
+                errorMessage += `Technical details: ${error.message}`;
+                alert(errorMessage);
+            }
+        }
+
+        // Setup video stream
+        async function setupVideoStream(streamUrl) {
+            const video = document.getElementById('videoElement');
+            
+            try {
+                console.log('Setting up video stream...');
+                
+                if (streamUrl && streamUrl.includes('.m3u8')) {
+                    await loadHLSJS();
+                    setupHLSStream(video, streamUrl);
+                } else if (streamUrl) {
+                    video.src = streamUrl;
+                    video.play();
+                }
+                
+                startOverlayUpdates();
+                
+            } catch (error) {
+                console.error('Video setup failed:', error);
+                setupDemoVideoFeed();
+            }
+        }
+
+        // Load HLS.js library
+        async function loadHLSJS() {
+            if (window.Hls) return;
+            
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.10/hls.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // Setup HLS stream
+        function setupHLSStream(video, streamUrl) {
+            if (window.Hls && Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(streamUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play();
+                });
+                
+                appState.hlsInstance = hls;
+            }
+        }
+
+        // Start video canvas updates
+        function startVideoCanvas() {
+            const canvas = document.getElementById('overlayCanvas');
+            const video = document.getElementById('videoElement');
+            
+            function resizeCanvas() {
+                const rect = video.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+            
+            window.addEventListener('resize', resizeCanvas);
+            video.addEventListener('loadedmetadata', resizeCanvas);
+            
+            setTimeout(resizeCanvas, 100);
+        }
+
+        // Start overlay updates
+        function startOverlayUpdates() {
+            const canvas = document.getElementById('overlayCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            function updateOverlay() {
+                if (!appState.showZones) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    requestAnimationFrame(updateOverlay);
+                    return;
+                }
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const scaleX = canvas.width / 640;
+                const scaleY = canvas.height / 360;
+                
+                appState.desks.forEach(desk => {
+                    const x = desk.zone.x * scaleX;
+                    const y = desk.zone.y * scaleY;
+                    const width = desk.zone.width * scaleX;
+                    const height = desk.zone.height * scaleY;
+                    
+                    ctx.strokeStyle = desk.occupied ? '#FF385C' : '#10B981';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash(desk.occupied ? [5, 5] : []);
+                    ctx.strokeRect(x, y, width, height);
+                    
+                    ctx.fillStyle = desk.occupied ? 'rgba(255, 56, 92, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+                    ctx.fillRect(x, y, width, height);
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.strokeText(`${desk.name} - ${desk.occupied ? 'OCCUPIED' : 'VACANT'}`, x + 8, y - 8);
+                    ctx.fillText(`${desk.name} - ${desk.occupied ? 'OCCUPIED' : 'VACANT'}`, x + 8, y - 8);
+                    
+                    if (desk.occupied) {
+                        ctx.fillStyle = '#FF385C';
+                        ctx.beginPath();
+                        ctx.arc(x + width/2, y + height/2, 12, 0, 2 * Math.PI);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('👤', x + width/2, y + height/2 + 5);
+                        ctx.textAlign = 'left';
+                    }
+                });
+                
+                if (appState.isSettingUpZones) {
+                    document.getElementById('setupOverlay').style.display = 'block';
+                    document.getElementById('setupOverlay').textContent = 
+                        `Click to position Desk ${appState.currentZoneIndex + 1}`;
+                } else {
+                    document.getElementById('setupOverlay').style.display = 'none';
+                }
+                
+                requestAnimationFrame(updateOverlay);
+            }
+            
+            updateOverlay();
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            appState.isConnected = connected;
+            const statusEl = document.getElementById('connectionStatus');
+            const statusDot = statusEl.querySelector('.status-dot');
+            
+            if (connected) {
+                statusEl.className = 'connection-badge connected';
+                statusDot.className = 'status-dot connected';
+                statusEl.innerHTML = '<div class="status-dot connected"></div>Connected';
+            } else {
+                statusEl.className = 'connection-badge disconnected';
+                statusDot.className = 'status-dot disconnected';
+                statusEl.innerHTML = '<div class="status-dot disconnected"></div>Disconnected';
+            }
+        }
+
+        // Show/hide live indicator
+        function showLiveIndicator(show) {
+            document.getElementById('liveIndicator').style.display = show ? 'flex' : 'none';
+        }
+
+        // Start tracking
+        function startTracking() {
+            if (!appState.isConnected) {
+                alert('Please connect to camera first');
+                return;
+            }
+
+            appState.isTracking = true;
+            const refreshRate = parseInt(document.getElementById('refreshRate').value) * 1000;
+
+            appState.refreshInterval = setInterval(() => {
+                simulatePersonDetection();
+                renderDeskGrid();
+                updateCharts();
+            }, refreshRate);
+
+            alert('Tracking started! Person detection is now active.');
+        }
+
+        // Stop tracking
+        function stopTracking() {
+            appState.isTracking = false;
+            if (appState.refreshInterval) {
+                clearInterval(appState.refreshInterval);
+            }
+            alert('Tracking stopped.');
+        }
+
+        // Simulate person detection
+        function simulatePersonDetection() {
+            appState.desks.forEach(desk => {
+                if (Math.random() < 0.1) {
+                    const wasOccupied = desk.occupied;
+                    desk.occupied = !desk.occupied;
+                    
+                    if (desk.occupied && !wasOccupied) {
+                        desk.occupiedSince = new Date();
+                        desk.vacantSince = null;
+                    } else if (!desk.occupied && wasOccupied) {
+                        if (desk.occupiedSince) {
+                            desk.totalTimeToday += Date.now() - desk.occupiedSince.getTime();
+                        }
+                        desk.vacantSince = new Date();
+                        desk.occupiedSince = null;
+                    }
+                    
+                    appState.trackingData.push({
+                        timestamp: new Date(),
+                        deskId: desk.id,
+                        event: desk.occupied ? 'occupied' : 'vacant'
+                    });
+                }
+            });
+        }
+
+        // Setup desk zones interactively
+        function setupDeskZones() {
+            appState.isSettingUpZones = true;
+            appState.currentZoneIndex = 0;
+            
+            const canvas = document.getElementById('overlayCanvas');
+            canvas.style.pointerEvents = 'auto';
+            
+            canvas.onclick = function(event) {
+                if (!appState.isSettingUpZones) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = (event.clientX - rect.left) * (640 / rect.width);
+                const y = (event.clientY - rect.top) * (360 / rect.height);
+                
+                const desk = appState.desks[appState.currentZoneIndex];
+                desk.zone.x = Math.max(0, x - desk.zone.width/2);
+                desk.zone.y = Math.max(0, y - desk.zone.height/2);
+                
+                desk.zone.x = Math.min(desk.zone.x, 640 - desk.zone.width);
+                desk.zone.y = Math.min(desk.zone.y, 360 - desk.zone.height);
+                
+                appState.currentZoneIndex++;
+                
+                if (appState.currentZoneIndex >= appState.desks.length) {
+                    appState.isSettingUpZones = false;
+                    canvas.style.pointerEvents = 'none';
+                    alert('Desk zones setup complete! All 6 desks have been positioned.');
+                }
+            };
+            
+            alert('Click on the video to position each desk zone. Start with Desk 1.');
+        }
+
+        // Refresh stream
+        function refreshStream() {
+            if (appState.isConnected && appState.deviceId && appState.imouToken) {
+                getImouLiveStream(appState.deviceId, appState.imouToken)
+                    .then(response => {
+                        if (response.success) {
+                            setupVideoStream(response.streamUrl);
+                            alert('Stream refreshed successfully!');
+                        } else {
+                            alert('Failed to refresh stream: ' + response.error);
+                        }
+                    });
+            } else {
+                alert('Please connect to camera first');
+            }
+        }
+
+        // Toggle zone visibility
+        function toggleZones() {
+            appState.showZones = !appState.showZones;
+            const button = event.target;
+            button.textContent = appState.showZones ? '👁️ Toggle Zones' : '🙈 Show Zones';
+        }
+
+        // Export tracking data
+        function exportData() {
+            const data = {
+                desks: appState.desks,
+                trackingEvents: appState.trackingData,
+                exportTime: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: 'application/json'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `desk-tracking-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize charts
+        function initializeCharts() {
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+            window.timelineChart = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Occupied Desks',
+                        data: [],
+                        borderColor: '#FF385C',
+                        backgroundColor: 'rgba(255, 56, 92, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#6B7280'
+                            },
+                            grid: {
+                                color: '#E5E7EB'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#6B7280'
+                            },
+                            grid: {
+                                color: '#E5E7EB'
+                            }
+                        }
+                    }
+                }
+            });
+
+            const utilizationCtx = document.getElementById('utilizationChart').getContext('2d');
+            window.utilizationChart = new Chart(utilizationCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Desk 1', 'Desk 2', 'Desk 3', 'Desk 4', 'Desk 5', 'Desk 6'],
+                    datasets: [{
+                        data: [45, 67, 23, 89, 34, 56],
+                        backgroundColor: [
+                            '#FF385C', '#10B981', '#F59E0B', 
+                            '#3B82F6', '#8B5CF6', '#EF4444'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                color: '#374151'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update charts with current data
+        function updateCharts() {
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            const occupiedCount = appState.desks.filter(desk => desk.occupied).length;
+            
+            window.timelineChart.data.labels.push(timeLabel);
+            window.timelineChart.data.datasets[0].data.push(occupiedCount);
+            
+            if (window.timelineChart.data.labels.length > 20) {
+                window.timelineChart.data.labels.shift();
+                window.timelineChart.data.datasets[0].data.shift();
+            }
+            
+            window.timelineChart.update('none');
+
+            const utilizationData = appState.desks.map(desk => 
+                Math.round(desk.totalTimeToday / (1000 * 60))
+            );
+            window.utilizationChart.data.datasets[0].data = utilizationData;
+            window.utilizationChart.update('none');
+        }
+
+        // Auto-update desk display every second
+        setInterval(() => {
+            if (appState.isTracking) {
+                renderDeskGrid();
+            }
+        }, 1000);
+
+        // Simulate some initial activity for demo
+        setTimeout(() => {
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    const occupiedCount = Math.floor(Math.random() * 6) + 1;
+                    const timeLabel = new Date(Date.now() - (10-i) * 60000).toLocaleTimeString('en-US', { 
+                        hour12: false, 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    window.timelineChart.data.labels.push(timeLabel);
+                    window.timelineChart.data.datasets[0].data.push(occupiedCount);
+                    window.timelineChart.update('none');
+                }, i * 100);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
